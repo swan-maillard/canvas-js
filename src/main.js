@@ -1,0 +1,1 @@
+document.getElementById("myCanvas").style.background = 'radial-gradient(circle, hsl(' + Math.floor(Math.random() * 360) + ', 27%, 31%) 0%, rgba(20,20,20,1) 50%,  rgba(0,0,0,1) 100%)';

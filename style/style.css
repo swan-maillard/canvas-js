@@ -5,13 +5,8 @@
 }
 
 html {
+    background: black;
     overflow: hidden;
-    background-color: white;
-}
-
-canvas {
-    background-color: black;
-    cursor: pointer;
 }
 
 #indication {

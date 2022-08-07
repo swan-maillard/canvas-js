@@ -76,7 +76,7 @@ class Face {
         this.pos = new Vector(x, y);
         this.eyeSeparation = eyeSeparation;
         this.eyeSize = eyeSize;
-        this.eye1 = new Eye(x-eyeSeparation-eyeSize, y, eyeSize, true);
+        this.eye1 = new Eye(x-eyeSeparation-eyeSize, y, eyeSize, false);
         this.eye2 = new Eye(x+eyeSeparation+eyeSize, y, eyeSize, false);
     }
 
