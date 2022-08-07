@@ -1,0 +1,39 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    overflow: hidden;
+    background-color: white;
+}
+
+canvas {
+    background-color: black;
+    cursor: pointer;
+}
+
+#indication {
+    color: white;
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translate(-50%);
+    font-size: 30px;
+}
+
+#informations {
+    position: absolute;
+    display: none;
+    top: 10px;
+    background-color: darkgray;
+    padding: 20px;
+    line-height: 30px;
+    border-radius: 5px;
+}
+
+#informations > #title {
+    font-weight: bold;
+    font-size: 20px;
+}
