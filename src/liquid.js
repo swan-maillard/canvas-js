@@ -69,5 +69,5 @@ class Metaball {
 }
 
 resizeCanvas();
-let metaball = new Metaball(20, "white");
+let metaball = new Metaball(20, "#ffffff");
 animate();

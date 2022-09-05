@@ -3,9 +3,9 @@ const ctx = canvas.getContext("2d");
 const nodes = [];
 const links = [];
 
-let nodeRadius = 0;
-let linkLength = 10;
-let nonElasticity = 50;
+let nodeRadius = 5;
+let linkLength = 20;
+let nonElasticity = 100;
 let gravity = 0.02;
 let rigid = false;
 
