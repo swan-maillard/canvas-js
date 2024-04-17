@@ -781,8 +781,26 @@
                 transition(robot.getJoint(2), 'r', 100)
 
                 transition(robot.getJoint(3), 'theta', Math.PI/2)
-                transition(robot.getJoint(3), 'r', 200)
-            }
+                await transition(robot.getJoint(3), 'r', 200)
+
+                transition(robot.getJoint(1), 'theta', -Math.PI/1.8)
+                transition(robot.getJoint(1), 'r', 130)
+                
+                transition(robot.getJoint(2), 'theta', -Math.PI/7)
+                transition(robot.getJoint(2), 'r', 200)
+
+                transition(robot.getJoint(3), 'theta', Math.PI/2.4)
+                await transition(robot.getJoint(3), 'r', 200)
+
+                transition(robot.getJoint(1), 'theta', -Math.PI/4)
+                transition(robot.getJoint(1), 'r', 130)
+
+                transition(robot.getJoint(2), 'theta', -Math.PI/2)
+                transition(robot.getJoint(2), 'r', 200)
+
+                transition(robot.getJoint(3), 'theta', Math.PI/1.5)
+                await transition(robot.getJoint(3), 'r', 200)
+            },
 
         ]
 
