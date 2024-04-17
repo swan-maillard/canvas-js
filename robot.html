@@ -37,6 +37,13 @@
             opacity: 0;
             transition: 1s;
         }
+        .titleSliders {
+            width: 100%;
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            color: white;
+        }
         .joint-sliders {
             display: flex;
             flex-direction: row;
@@ -237,6 +244,7 @@
 <body>
     <canvas id="robotCanvas"></canvas>
     <div id="slidersContainer" class="slider-container">
+        <span class="titleSliders">DH Table</span>
     </div>
     <script>
         const canvas = document.getElementById('robotCanvas');
