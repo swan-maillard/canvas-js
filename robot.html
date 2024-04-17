@@ -569,6 +569,12 @@
                 sliderContainer.style.opacity = 1;
             }
 
+            clear() {
+                const sliderContainer = document.getElementById('slidersContainer')
+                sliderContainer.innerHTML = "";
+                robot = null;
+            }
+
             updateSliders() {
                 this.joints.forEach((joint, index) => {
                     if (index === 0) return;
@@ -638,7 +644,7 @@
             }
         }
 
-        const robot = new Robot();
+        let robot = null;
 
 
         function lerp(start, end, progress) {
@@ -669,6 +675,7 @@
 
         const actions = [
             () => {
+                robot = new Robot();
                 robot.addJoint();
                 transition(robot.getLastJoint(), 'theta', -Math.PI/4)
             },
@@ -799,8 +806,12 @@
                 transition(robot.getJoint(2), 'r', 200)
 
                 transition(robot.getJoint(3), 'theta', Math.PI/1.5)
-                await transition(robot.getJoint(3), 'r', 200)
+                transition(robot.getJoint(3), 'r', 200)
             },
+            () => {
+                robot.clear();
+                action = 0;
+            }
 
         ]
 
@@ -809,8 +820,8 @@
             // Check if the pressed key is Enter (key code 13)
             if (event.keyCode === 13) {
 
-                doAction()
-                while (action < 5) {
+                doAction();
+                while (action > 0 && action < 5) {
                     await sleep(75);
                     doAction();
                 }
@@ -826,8 +837,10 @@
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            robot.draw();
-            robot.updateSliders();
+            if (robot) {
+                robot.draw();
+                robot.updateSliders();
+            }
 
             requestAnimationFrame(animate);
         }
