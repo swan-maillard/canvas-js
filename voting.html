@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voting simulator</title>
+    <link rel="stylesheet" href="style/style.css">
+    <style>
+        html {
+            background-color: #ededed;
+        }
+
+        .select {
+            display: grid;
+            grid-template-areas: "select";
+            align-items: center;
+            position: relative;
+            border: 1px solid grey;
+            border-radius: none;
+            padding: 0.4em 0.5em;
+            font-size: 1.1rem;
+            cursor: pointer;
+            line-height: 1.1;
+            background-color: #fff;
+            background-image: linear-gradient(to top, #efefef, #fff 33%);
+        }
+
+        label {
+            font-size: 1.125rem;
+            font-weight: 500;
+        }
+
+        label + .select {
+            margin-top: 5px;
+        }
+    </style>
+    <script src="src/voting-2.js" type="text/javascript" defer></script>
+</head>
+<body>
+
+<canvas id="myCanvas"></canvas>
+<div style="margin-left: 20px;display: flex; gap: 30px">
+    <div>
+        <label for="vote-system">Choisissez un système de vote :</label>
+        <select class="select" name="vote-system" onchange="simulation.handleChangeElectionType(this.value)">
+            <option value="majoritaire">Vote Majoritaire Uninominal</option>
+            <option value="approbation">Vote par Approbation</option>
+        </select>
+    </div>
+    <div>
+        <label for="vote-system">Comment voter ?</label>
+        <select class="select" name="vote-system" onchange="simulation.handleChangeHonesty(!!parseInt(this.value))">
+            <option value=1>Vote honnête</option>
+            <option value=0>Vote stratégique</option>
+        </select>
+    </div>
+</div>
+
+
+</body>
+</html>
