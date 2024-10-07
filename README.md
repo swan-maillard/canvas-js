@@ -50,7 +50,7 @@ This project simulates a robotic arm with multiple joints. The user can interact
 
 ### Strabulin
 
-Strabulin is a very friendly person quite intrigued by the mouse!
+Strabulin is a friendly character very intrigued by the mouse!
 
 [View Project](https://swan-maillard.github.io/canvas-js/strabulin.html)
 
