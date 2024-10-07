@@ -1,7 +1,3 @@
-Here’s the updated content with the "View Project" links placed next to the titles as requested:
-
----
-
 # Canvas-JS Projects
 
 ## Description
