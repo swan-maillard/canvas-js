@@ -1,61 +1,3 @@
-let lastCandidateSelected = null;
-let winner = null;
-let predictedWinner = null;
-
-const VOTE_SYSTEMS = ['vote-majoritaire', 'vote-approbation'];
-let voteSystem = VOTE_SYSTEMS[0];
-let honestVote = true;
-
-
-const mouse = {
-    x: 0,
-    y: 0,
-    candidate: null
-};
-
-const electionPlan = {
-    width: 0,
-    height: 0
-}
-
-const BORDER_WIDTH = 10;
-const NB_VOTERS = 300;
-
-
-window.addEventListener('mousemove', handleMouseMove);
-window.addEventListener('mousedown', handleMouseDown);
-window.addEventListener('mouseup', handleMouseUp);
-
-function handleMouseMove(e) {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-}
-
-function handleMouseDown() {
-    candidates.forEach(candidate => {
-        if (getDistance(mouse.x, mouse.y, candidate.x, candidate.y) <= candidate.radius) {
-            candidate.selected = true;
-            mouse.candidate = candidate;
-        }
-    });
-}
-
-function handleMouseUp() {
-    if (mouse.candidate) {
-        mouse.candidate.selected = false;
-        mouse.candidate = null;
-    }
-}
-
-function changeVoteSystem(newVoteSystem) {
-    if (VOTE_SYSTEMS.includes(newVoteSystem))
-        voteSystem = newVoteSystem;
-}
-
-function changeHonestVote(val) {
-    honestVote = val;
-}
-
 function gaussianDistribution(min, max) {
     let u, v;
     do {
@@ -71,26 +13,11 @@ function gaussianDistribution(min, max) {
     return num;
 }
 
-function getRandomPosition() {
-    return [
-        Math.floor(gaussianDistribution(BORDER_WIDTH, electionPlan.width - BORDER_WIDTH)),
-        Math.floor(gaussianDistribution(BORDER_WIDTH, electionPlan.height - BORDER_WIDTH))
-    ];
-}
-
 function getDistance(x1, y1, x2, y2) {
     return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
 }
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = 500;
-
-    electionPlan.width = 1000;
-    electionPlan.height = canvas.height;
-}
-
-function canvas_arrow(context, fromx, fromy, tox, toy) {
+function drawArrow(context, fromx, fromy, tox, toy) {
     const headlen = 10; // length of head in pixels
     const dx = tox - fromx;
     const dy = toy - fromy;
@@ -103,285 +30,484 @@ function canvas_arrow(context, fromx, fromy, tox, toy) {
     context.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
 }
 
+
+////////////////////////////////////
+
+
+//////////////////////
+// SIMULATION CLASS //
+//////////////////////
 class Simulation {
     constructor() {
+        this.mouse = {
+            x: 0,
+            y: 0,
+            candidate: null
+        };
         this.canvas = document.getElementById("myCanvas");
-        this.ctx = canvas.getContext("2d");
+        this.simulationField = {width: 0, height: 0};
+        this.statsField = {width: 0, height: 0}
+        this.ctx = this.canvas.getContext("2d");
         this.voters = [];
-        this.candidates = {};
-        this.election = new ElectionMajoritaire(this.candidates, this.voters);
+        this.candidates = [];
+        this.election = null;
+        this.electionType = 'majoritaire'
+
+        this.resizeCanvas(window.innerWidth, 500);
+
+        window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        window.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        window.addEventListener('mouseup', this.handleMouseUp.bind(this));
+
     }
 
-    run(nbVoters = 100, candidates = {}) {
-        for (let i = 0; i < nbVoters; i++) {
-            voters.push(new Voter(...getRandomPosition()));
-        }
-        this.candidates = candidates;
+    handleMouseMove(e) {
+        this.mouse.x = e.clientX;
+        this.mouse.y = e.clientY;
 
+        document.body.style.cursor = "default";
+        this.candidates.forEach(candidate => {
+            if (getDistance(this.mouse.x, this.mouse.y, candidate.x, candidate.y) <= candidate.radius) {
+                document.body.style.cursor = this.mouse.candidate ? "grabbing" : "grab";
+            }
+        });
+    }
+
+    handleMouseDown() {
+        this.candidates.forEach(candidate => {
+            if (!this.mouse.candidate && getDistance(this.mouse.x, this.mouse.y, candidate.x, candidate.y) <= candidate.radius) {
+                candidate.selected = true;
+                this.mouse.candidate = candidate;
+                document.body.style.cursor = "grabbing";
+            }
+        });
+    }
+
+
+    handleMouseUp() {
+        if (this.mouse.candidate) {
+            this.mouse.candidate.selected = false;
+            this.mouse.candidate = null;
+            document.body.style.cursor = "grab";
+        }
+    }
+
+    handleChangeElectionType(electionType) {
+        switch (electionType) {
+            case 'approbation':
+                this.election = new ElectionApprobation();
+                break;
+            default:
+                this.election = new ElectionMajoritaire();
+        }
+    }
+
+    handleChangeHonesty(honesty) {
+        this.election.honnestVote = !!honesty;
+    }
+
+    resizeCanvas(width, height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.simulationField = {width: width*0.6, height};
+    }
+
+    run(nbVoters = 100) {
+        this.election = new ElectionMajoritaire();
+
+        for (let i = 0; i < nbVoters; i++) {
+            this.voters.push(new Voter(...this.getRandomPosition()));
+        }
+
+        const candidates = [
+            ['Technocrates', '#3b64d4'],
+            ['Verdoyants', '#4bad49'],
+            ['Front Prospère', '#f0b922'],
+            ['Parti Solidaire', '#f527f5'],
+        ]
+
+        candidates.forEach(([name, color]) => {
+            this.candidates.push(new Candidate(name, ...this.getRandomPosition(), color));
+        })
+
+        this.animate();
+    }
+
+    animate() {
         this.drawPlan();
         this.drawVoters();
-        this.updateCandidates();
+        this.moveCandidates();
         
-        election.runHonestPreferences();
-        election.runElection();
+        this.election.init(this.voters, this.candidates);
+        this.election.runHonestPreferences();
+        this.election.runPoll();
+        this.election.runElection();
 
-        let maxVotes = 0;
-        let temp_winner = null;
-        candidates.forEach((candidate, index) => {
-            candidate.draw();
+        this.drawCandidates();
 
-            if (!temp_winner || candidate.votes > maxVotes) {
-                temp_winner = candidate;
-                maxVotes = candidate.votes;
-            }
-            
+        this.drawPoll();
+        this.drawResults();
 
-            const MAX_HEIGHT_BAR = 200;
-            const WIDTH_BAR = 30;
-            const heightBar = candidate.votes/NB_VOTERS*MAX_HEIGHT_BAR
-            ctx.fillStyle = candidate.color;
-            ctx.fillRect(electionPlan.width + 50 + index*(15 + WIDTH_BAR), electionPlan.height/2, WIDTH_BAR, -heightBar);
-            ctx.font = "18px sans-serif";
-            ctx.fillStyle = "black";
-            const percentage = Math.round(candidate.votes/NB_VOTERS*100) + '%';
-            const text = ctx.measureText(percentage)
-            ctx.fillText(percentage, electionPlan.width + 50 + index*(15 + WIDTH_BAR) - text.width/2 + WIDTH_BAR/2, electionPlan.height/2 + WIDTH_BAR - heightBar - 35);
-        });
-    
-        winner = temp_winner;
-
-        ctx.font = "25px sans-serif";
-        ctx.fillStyle = "black";
-        ctx.fillText("Victoire des", electionPlan.width + 50, electionPlan.height/2 + 30);
-        ctx.font = "bold 30px sans-serif";
-        ctx.fillStyle = winner.color;
-        ctx.fillText(winner.name, electionPlan.width + 50, electionPlan.height/2 + 60);
-
-        requestAnimationFrame(this.run);
+        requestAnimationFrame(this.animate.bind(this));
     }
 
     drawPlan() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Draw axis
+        const width = this.simulationField.width;
+        const height = this.simulationField.height;
         this.ctx.beginPath();
         this.ctx.strokeStyle = '#a3a2a2';
-        canvas_arrow(ctx, 30, electionPlan.height / 2, electionPlan.width - 30, electionPlan.height / 2);
-        canvas_arrow(ctx, electionPlan.width / 2, electionPlan.height - 30, electionPlan.width / 2, 30);
+        drawArrow(this.ctx, 30, height / 2, width - 30, height / 2);
+        drawArrow(this.ctx, width / 2, height - 30, width / 2, 30);
         this.ctx.stroke();
     }
 
-    drawVoters() {this.voters.forEach(voter => voter.draw())}
+    drawVoters() {this.voters.forEach(voter => voter.draw(this.ctx))}
 
-    updateCandidates() {
-        Object.values(this.candidates).forEach(candidate => candidate.update());
+    moveCandidates() {this.candidates.forEach(candidate => candidate.move(this.mouse, this.simulationField))}
+
+    drawCandidates() {this.candidates.forEach(candidate => candidate.draw(this.ctx, this.election.winner === candidate) )}
+
+    drawPoll() {
+        const MAX_HEIGHT_BAR = 150;
+        const WIDTH_BAR = 20;
+
+        const X_START = this.simulationField.width + 150 + this.candidates.length * 45;
+        const Y_START = 30 + MAX_HEIGHT_BAR;
+
+        const nbVoters = this.voters.length;
+
+        this.candidates.forEach((candidate, index) => {
+        
+            const votes = candidate.pollVotes;
+            const heightBar = votes / nbVoters * MAX_HEIGHT_BAR;
+
+            // Bar
+            this.ctx.fillStyle = candidate.color;
+            this.ctx.fillRect(X_START + index*(10 + WIDTH_BAR), Y_START, WIDTH_BAR, -heightBar);
+
+            // Percentage
+            this.ctx.font = "12px sans-serif";
+            this.ctx.fillStyle = "black";
+            const percentage = Math.round(votes/nbVoters*100) + '%';
+            const text = this.ctx.measureText(percentage)
+            this.ctx.fillText(percentage, X_START + index*(10 + WIDTH_BAR) - text.width/2 + WIDTH_BAR/2, 
+                Y_START + WIDTH_BAR - heightBar - 24);
+        });
+
+        const winner = this.election.getPollWinner();
+        this.ctx.font = "15px sans-serif";
+        this.ctx.fillStyle = "black";
+        this.ctx.fillText("Sondage honnête", X_START, Y_START + 15);        
+        this.ctx.font = "18px sans-serif";
+        this.ctx.fillStyle = winner?.color || 'grey';
+        this.ctx.fillText(winner?.name || "Égalité", X_START, Y_START + 35);
+    }
+
+    drawResults() {
+        const MAX_HEIGHT_BAR = 150;
+        const WIDTH_BAR = 30;
+
+        const X_START = this.simulationField.width + 50;
+        const Y_START = 30 + MAX_HEIGHT_BAR;
+
+        const nbVoters = this.voters.length;
+
+        this.candidates.forEach((candidate, index) => {
+        
+            const votes = candidate.votes;
+            const heightBar = votes / nbVoters * MAX_HEIGHT_BAR;
+
+            // Bar
+            this.ctx.fillStyle = candidate.color;
+            this.ctx.fillRect(X_START + index*(15 + WIDTH_BAR), Y_START, WIDTH_BAR, -heightBar);
+
+            // Percentage
+            this.ctx.font = "18px sans-serif";
+            this.ctx.fillStyle = "black";
+            const percentage = Math.round(votes/nbVoters*100) + '%';
+            const text = this.ctx.measureText(percentage)
+            this.ctx.fillText(percentage, X_START + index*(15 + WIDTH_BAR) - text.width/2 + WIDTH_BAR/2, 
+                Y_START + WIDTH_BAR - heightBar - 35);
+        });
+
+        const winner = this.election.winner;
+        
+        if (winner) {
+            this.ctx.font = "25px sans-serif";
+            this.ctx.fillStyle = "black";
+            this.ctx.fillText("Victoire des", X_START, Y_START + 25);
+            this.ctx.font = "bold 30px sans-serif";
+            this.ctx.fillStyle = winner.color;
+            this.ctx.fillText(winner.name, X_START, Y_START + 55);
+        }
+        else {
+            this.ctx.font = "bold 25px sans-serif";
+            this.ctx.fillStyle = "grey";
+            this.ctx.fillText("Égalité", X_START, Y_START + 40);
+        }
+        
+    }
+
+
+    getRandomPosition() {
+        return [
+            Math.floor(gaussianDistribution(0, this.simulationField.width - 0)),
+            Math.floor(gaussianDistribution(0, this.simulationField.height - 0))
+        ];
     }
 }
 
+
+//////////////////////
+// ELECTION CLASSES //
+//////////////////////
 class Election {
-    constructor(candidates, voters) {
-        this.candidates = candidates;
+    constructor() {
+        this.winner = null;
+        this.voters = null;
+        this.candidates = null;
+        this.honnestVote = true;
+        
+        this.STATEGICAL_VOTERS = 0.75;
+    }
+
+    init(voters, candidates) {
+        this.winner = null;
         this.voters = voters;
-        this.poll = {};
-        this.votes = {};
+        this.candidates = candidates;
+
+        this.voters.forEach(voter => {
+            voter.honestPreferences = [];
+            voter.votedCandidates = [];
+        });
+
+        this.candidates.forEach(candidate => {
+            candidate.votes = 0;
+            candidate.pollVotes = 0;
+        })
     }
 
     runHonestPreferences() {
-        this.voters.forEach(voter => voter.findHonestPreferences(candidates));
+        this.voters.forEach(voter => voter.findHonestPreferences(this.candidates));
+    }
+
+    runPoll() {
+        this.voters.forEach(voter => {
+            if (voter.honestPreferences.length > 0) {
+                voter.honestPreferences[0].pollVotes++;
+            }
+        })
+    }
+
+    areChancesLow(candidate) {
+        const DIFF_THRESHOLD = 0.2; // difference de chances entre proba max et proba candidat de 20%
+        const scores = this.candidates.map(c => c.pollVotes);
+        const total = scores.reduce((acc, score) => acc + score);
+        return Math.abs((candidate.pollVotes-Math.max(...scores))/total) > DIFF_THRESHOLD;
+    }
+
+    areChancesClose(candidate1, candidate2) {
+        const DIFF_THRESHOLD = 0.10; // difference de chances entre les deux candidats de 10%
+        const total = this.candidates.reduce((acc, c) => acc + c.pollVotes, 0);
+        return Math.abs((candidate1.pollVotes-candidate2.pollVotes)/total) < DIFF_THRESHOLD;
     }
 
     runElection() {};
+
+    getPollWinner() {
+        return this.candidates.sort((c1, c2) => c2.pollVotes - c1.pollVotes)[0];
+    }
 }
 
 class ElectionMajoritaire extends Election {
+    runPoll() {
+        this.voters.forEach(voter => {
+            if (voter.honestPreferences.length > 0) {
+                voter.honestPreferences[0].pollVotes++;
+            }
+        })
+    }
 
     runElection() {
         this.voters.forEach(voter => {
             if (voter.honestPreferences.length > 0) {
-                const voted = voter.honestPreferences[0];
+                const closest = voter.honestPreferences[0];
+
+                let voted = this.honnestVote ? closest : this.#makeStrategicalVote(voter, closest);
+
                 voter.votedCandidates = [voted];
-                votes[voted] = votes[voted] ? 1 : votes[voted] + 1;
+                voted.votes++;
             }
-        })
+        });
+
+        const orderedCandidates = [...this.candidates].sort((c1, c2) => c2.votes - c1.votes);
+        if (orderedCandidates[0].votes > orderedCandidates[1].votes) {
+            this.winner = orderedCandidates[0];
+        }
+    }
+
+    #makeStrategicalVote(voter, closest) {
+        let voted = null;
+        if (voter.randomNumber < this.STATEGICAL_VOTERS && this.areChancesLow(closest)) {
+            let i = 1;
+            while (!voted && voter.honestPreferences.length > i && 
+                    voter.getDistanceFromCandidate(voter.honestPreferences[i]) < voter.IDEOLOGY_PERIMETER) {
+                if (!this.areChancesLow(voter.honestPreferences[i])) {
+                    voted = voter.honestPreferences[i];
+                }
+                ++i;
+            }
+        }
+
+        return voted || closest;
+    }
+}
+
+class ElectionApprobation extends Election {
+    runPoll() {
+        this.voters.forEach(voter => {
+            let i = 0;
+            while (i < this.candidates.length && voter.getDistanceFromCandidate(voter.honestPreferences[i]) < voter.IDEOLOGY_PERIMETER) {
+                voter.honestPreferences[i++].pollVotes++;
+            }
+        });
+    }
+
+    runElection() {
+        this.voters.forEach(voter => {
+            let i = 0;
+            while (i < this.candidates.length && voter.getDistanceFromCandidate(voter.honestPreferences[i]) < voter.IDEOLOGY_PERIMETER) {
+                const closest = voter.honestPreferences[i++];
+
+                let ignoreCandidate = this.honnestVote ? false : this.#makeStrategicalVote(voter, closest);
+                
+                if (!ignoreCandidate) {
+                    voter.votedCandidates.push(closest);
+                    closest.votes++;
+                }
+            }
+        });
+
+        const orderedCandidates = [...this.candidates].sort((c1, c2) => c2.votes - c1.votes);
+        if (orderedCandidates[0].votes > orderedCandidates[1].votes) {
+            this.winner = orderedCandidates[0];
+        }
+    }
+
+    #makeStrategicalVote(voter, closest) {
+        let ignored = false;
+        if (voter.randomNumber > this.STATEGICAL_VOTERS) return ignored;
+
+        voter.votedCandidates.some(voted => {
+            if (this.areChancesClose(voted, closest) && (voted.pollVotes <= closest.pollVotes || voter.randomNumber < 0.5)) {
+                ignored = true;
+                return;
+            }
+            if (!this.areChancesLow(voted)) {
+                return;
+            }
+        });
+
+        return ignored;
     }
 }
 
 
+/////////////////
+// VOTER CLASS //
+/////////////////
 class Voter {
-    constructor(x, y, candidates) {
+    constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.initX = x;
-        this.initY = y;
-        this.radius = 6;
-        this.candidates = candidates;
         this.randomNumber = Math.random();
         this.honestPreferences = [];
         this.votedCandidates = [];
-    }
 
-    draw() {
-        const colors = this.getColors()
-        colors.forEach((color, index) => {
-            ctx.beginPath();
-            ctx.fillStyle = color;
-            const portion = 2 * Math.PI / this.getColors().length;
-            ctx.moveTo(this.x, this.y);
-            ctx.arc(this.x, this.y, this.radius, index * portion, (index + 1) * portion);
-            ctx.lineTo(this.x, this.y);
-            ctx.fill();
-        });
-    }
-
-    findHonestPreferences(candidates) {
-        this.honestPreferences = [...candidates.sort((c1, c2) => {
-            return this.getDistanceFromCandidate(c1) - this.getDistanceFromCandidate(c2);
-        })];
+        this.IDEOLOGY_PERIMETER = 200;
+        this.RADIUS = 6;
     }
 
     getColors() {
         const colors = [];
+        this.votedCandidates.sort((c1, c2) => (c1.name < c2.name ? -1 : 1))
         this.votedCandidates.forEach(candidate => colors.push(candidate.color));
         if (colors.length === 0) colors.push('#a3a2a2');
         return colors;
     }
 
-    voteMajoritaire() {
-        let chosenCandidate = null;
-        let bestScore = 0;
-        this.colors = [];
-
-        // L'électeur choisit le candidat le plus proche
-        candidates.forEach(candidate => {
-            if (!chosenCandidate || this.getDistanceFromCandidate(candidate) < bestScore) {
-                chosenCandidate = candidate;
-                bestScore = this.getDistanceFromCandidate(candidate);
-            }
+    findHonestPreferences(candidates) {
+        this.honestPreferences = [...candidates].sort((c1, c2) => {
+            return this.getDistanceFromCandidate(c1) - this.getDistanceFromCandidate(c2);
         });
-
-        // Si le candidat le plus proche n'a pas de chance d'être élu et qu'il veut voter stratégique
-        if (!honestVote && chosenCandidate !== predictedWinner) {
-
-            // Il cherche le plus proche candidat ayant une chance d'être élu (max 10% de diff avec la prédiction)
-            let closestCandidate = {
-                candidate: null,
-                distance: 0
-            }
-            candidates.forEach(candidate => {
-                if (candidate === chosenCandidate) return;
-                if ((candidate.predictedVotes - predictedWinner.predictedVotes)/NB_VOTERS < 0.1 && (
-                    !closestCandidate.candidate ||
-                    this.getDistanceFromCandidate(candidate) < closestCandidate.distance)) {
-
-                    closestCandidate = {
-                        candidate: candidate,
-                        distance: this.getDistanceFromCandidate(candidate)
-                    }
-                }
-            })
-
-            if (closestCandidate.candidate && 
-                closestCandidate.candidate !== predictedWinner &&
-                closestCandidate.candidate.predictedVotes > chosenCandidate.predictedVotes &&
-                this.randomNumber <= 2/3) {
-                    chosenCandidate = closestCandidate.candidate;
-            }
-        }
-
-        if (chosenCandidate) {
-            this.colors.push(chosenCandidate.color);
-            chosenCandidate.votes++;
-        }
-    }
-
-    voteApprob() {
-        const perimeter = 150;
-        this.colors = [];
-        candidates.forEach(candidate => {
-            if (this.getDistanceFromCandidate(candidate) <= perimeter) {
-                candidate.votes++;
-                this.colors.push(candidate.color);
-            }
-        });
-    }
-
-    prediction() {
-        let chosenCandidate = null;
-        let bestScore = 0;
-        candidates.forEach(candidate => {
-            if (!chosenCandidate || this.getDistanceFromCandidate(candidate) < bestScore) {
-                chosenCandidate = candidate;
-                bestScore = this.getDistanceFromCandidate(candidate);
-            }
-        });
-
-        if (chosenCandidate) {
-            chosenCandidate.predictedVotes++;
-        }
     }
 
     getDistanceFromCandidate(candidate) {
         return getDistance(this.x, this.y, candidate.x, candidate.y);
     }
+
+    draw(ctx) {
+        const colors = this.getColors();
+        colors.forEach((color, index) => {
+            ctx.beginPath();
+            ctx.fillStyle = color;
+            const portion = 2 * Math.PI / this.getColors().length;
+            ctx.moveTo(this.x, this.y);
+            ctx.arc(this.x, this.y, this.RADIUS, index * portion, (index + 1) * portion);
+            ctx.lineTo(this.x, this.y);
+            ctx.fill();
+        });
+    }
 }
 
+
+/////////////////////
+// CANDIDATE CLASS //
+/////////////////////
 class Candidate {
     constructor(name, x, y, color) {
         this.name = name;
         this.x = x;
         this.y = y;
-        this.initX = x;
-        this.initY = y;
         this.radius = 30;
         this.color = color;
         this.selected = false;
         this.votes = 0;
-        this.predictedVotes = 0;
+        this.pollVotes = 0;
     }
 
-    draw() {
+    draw(ctx, isWinner) {
         ctx.beginPath();
         ctx.fillStyle = this.color;
         ctx.strokeStyle = '#434345';
-        ctx.lineWidth = (winner && winner === this ? 5 : 3);
+        ctx.lineWidth = (isWinner ? 5 : 3);
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
 
-        ctx.font = (winner && winner === this ? "bold " : "") + "20px sans-serif";
+        ctx.font = (isWinner ? "bold " : "") + "20px sans-serif";
         ctx.fillStyle = "#434345";
         let eyes = "•   •";
         let text = ctx.measureText(eyes);
         ctx.fillText(eyes, this.x - text.width / 2, this.y);
-        let mouth = (winner && winner === this ? "o" : '—');
+        let mouth = (isWinner ? "o" : '—');
         text = ctx.measureText(mouth);
         ctx.fillText(mouth, this.x - text.width / 2, this.y + 15);
     }
 
-    update() {
-        this.votes = 0;
-        this.predictedVotes = 0;
+    move(mouse, simulationField) {
         if (this.selected) {
-            const offset = BORDER_WIDTH+this.radius;
-            this.x = Math.max(offset, Math.min(electionPlan.width-offset, mouse.x));
-            this.y = Math.max(offset, Math.min(electionPlan.height-offset, mouse.y));
+            const offset = this.radius;
+            this.x = Math.max(offset, Math.min(simulationField.width-offset, mouse.x));
+            this.y = Math.max(offset, Math.min(simulationField.height-offset, mouse.y));
         }
-    }
-
-    getDistanceFromCandidate(candidate) {
-        return getDistance(this.x, this.y, candidate.x, candidate.y);
     }
 }
 
-
-
-resizeCanvas();
-
-
-candidates['techno'] = (new Candidate('Technocrates', ...getRandomPosition(), '#3b64d4')); // blue
-candidates['verts'] = (new Candidate('Verdoyants', ...getRandomPosition(), '#4bad49')); // green
-candidates['prosperes'] = (new Candidate('Front Prospère', ...getRandomPosition(), '#f0b922')); // gold
-candidates['solidaires'] = (new Candidate('Parti Solidaire', ...getRandomPosition(), '#f527f5')); // purple
+////////////////////////////////////
 
 const simulation = new Simulation();
-simulation.run(NB_VOTERS, candidates);
+simulation.run(300);
