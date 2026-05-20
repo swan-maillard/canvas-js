@@ -2,59 +2,124 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Voting simulator</title>
-    <link rel="stylesheet" href="style/style.css">
-    <style>
-        html {
-            background-color: #ededed;
-        }
-
-        .select {
-            display: grid;
-            grid-template-areas: "select";
-            align-items: center;
-            position: relative;
-            border: 1px solid grey;
-            border-radius: none;
-            padding: 0.4em 0.5em;
-            font-size: 1.1rem;
-            cursor: pointer;
-            line-height: 1.1;
-            background-color: #fff;
-            background-image: linear-gradient(to top, #efefef, #fff 33%);
-        }
-
-        label {
-            font-size: 1.125rem;
-            font-weight: 500;
-        }
-
-        label + .select {
-            margin-top: 5px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting Systems Simulator</title>
+    <link rel="stylesheet" href="style/voting.css">
     <script src="src/voting.js" type="text/javascript" defer></script>
+    <link rel="shortcut icon" href="assets/voting-favicon.png" type="image/x-icon">
 </head>
 <body>
+<div class="app">
+    <header class="topbar">
+        <div class="topbar-text">
+            <h1>Voting Systems Simulator</h1>
+            <p class="subtitle">
+                Interactive companion to my college research on the French presidential voting system &mdash;
+                its flaws and the alternatives explored by mathematicians and statisticians.
+            </p>
+        </div>
+        <a class="paper-link" href="docs/PPH%20Swan%20MAILLARD.pdf" target="_blank" rel="noopener">
+            <span class="paper-icon">PDF</span>
+            Read the paper <span class="paper-lang">(FR)</span>
+        </a>
+    </header>
 
-<canvas id="myCanvas"></canvas>
-<div style="margin-left: 20px;display: flex; gap: 30px">
-    <div>
-        <label for="vote-system">Choisissez un système de vote :</label>
-        <select class="select" name="vote-system" onchange="simulation.handleChangeElectionType(this.value)">
-            <option value="majoritaire">Vote Majoritaire Uninominal</option>
-            <option value="approbation">Vote par Approbation</option>
-        </select>
-    </div>
-    <div>
-        <label for="vote-system">Comment voter ?</label>
-        <select class="select" name="vote-system" onchange="simulation.handleChangeHonesty(!!parseInt(this.value))">
-            <option value=1>Vote honnête</option>
-            <option value=0>Vote stratégique</option>
-        </select>
-    </div>
+    <main class="layout">
+        <section class="canvas-card">
+            <div class="canvas-header">
+                <h2>Political map</h2>
+                <div class="legend">Drag the candidates &middot; each dot is a voter</div>
+            </div>
+            <div class="canvas-wrap">
+                <canvas id="myCanvas"></canvas>
+            </div>
+        </section>
+
+        <aside class="sidebar">
+            <div class="card">
+                <h2>Settings</h2>
+
+                <div class="field">
+                    <label for="voting-system" class="field-label"><span>Voting system</span></label>
+                    <select id="voting-system"></select>
+                    <p class="hint" id="system-description"></p>
+                </div>
+
+                <div id="approval-options" hidden>
+                    <div class="field">
+                        <label for="approval-radius" class="field-label">
+                            <span>Approval radius</span>
+                            <span class="value-display" id="approval-radius-value">200</span>
+                        </label>
+                        <input type="range" id="approval-radius" min="50" max="400" step="10" value="200">
+                    </div>
+                    <div class="field">
+                        <label class="toggle-row">
+                            <input type="checkbox" id="show-radius">
+                            Show approval circles
+                        </label>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="honesty" class="field-label"><span>Voter behavior</span></label>
+                    <select id="honesty">
+                        <option value="1">Honest voting</option>
+                        <option value="0">Strategic voting</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="voter-count" class="field-label">
+                        <span>Voters</span>
+                        <span class="value-display" id="voter-count-value">300</span>
+                    </label>
+                    <input type="range" id="voter-count" min="50" max="800" step="10" value="300">
+                </div>
+
+                <div class="field">
+                    <div class="field-label"><span>Candidates</span></div>
+                    <div class="candidate-list" id="candidate-list"></div>
+                    <button class="btn" id="add-candidate">+ Add candidate</button>
+                </div>
+
+                <div class="field">
+                    <label class="toggle-row">
+                        <input type="checkbox" id="show-preferences">
+                        Show voter ↔ candidate links
+                    </label>
+                </div>
+
+                <div class="actions">
+                    <button class="btn" id="reposition">Reposition candidates</button>
+                    <button class="btn" id="redistribute">Shuffle voters</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Results</h2>
+
+                <div class="winner-display">
+                    <div>
+                        <div class="winner-label">Winner</div>
+                        <div class="winner-name" id="winner-name">—</div>
+                    </div>
+                    <div class="winner-metric">
+                        <div class="winner-label">Satisfaction</div>
+                        <div class="metric-value" id="satisfaction">—</div>
+                    </div>
+                </div>
+
+                <h3>Election</h3>
+                <div class="bar-chart" id="election-chart"></div>
+
+                <div id="poll-section" hidden>
+                    <h3>Honest poll</h3>
+                    <div class="bar-chart" id="poll-chart"></div>
+                </div>
+            </div>
+        </aside>
+    </main>
 </div>
-
-
 </body>
 </html>
